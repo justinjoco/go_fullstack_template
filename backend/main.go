@@ -17,7 +17,8 @@ func connectToDB() (*sql.DB, error) {
 	connStr := "postgres://admin:password@postgres/app_db"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal("DB connection failed")
+		log.Println("DB connection failed")
+		return nil, err
 	}
 
 	err = db.Ping()
