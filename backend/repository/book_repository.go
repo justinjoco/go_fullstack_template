@@ -1,11 +1,15 @@
 package repository
 
-import "database/sql"
+import (
+	"github.com/go-redis/redis/v8"
+	"gorm.io/gorm"
+)
 
 type BookRepository struct {
-	db *sql.DB
+	db  *gorm.DB
+	rdb *redis.Client
 }
 
-func NewBookRepository(db *sql.DB) *BookRepository {
-	return &BookRepository{db: db}
+func NewBookRepository(db *gorm.DB, rdb *redis.Client) *BookRepository {
+	return &BookRepository{db: db, rdb: rdb}
 }

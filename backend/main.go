@@ -4,51 +4,63 @@ import (
 	"app/controller"
 	"app/repository"
 	"app/service"
-	"database/sql"
+	"context"
 	"log"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-func connectToDB() (*sql.DB, error) {
+func connectToDB() (*gorm.DB, error) {
 
-	connStr := "postgres://admin:password@postgres/app_db"
-	db, err := sql.Open("postgres", connStr)
+	dsn := "postgres://admin:password@postgres/app_db"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Println("DB connection failed")
-		return nil, err
-	}
-
-	err = db.Ping()
-	if err == nil {
-		db.Close()
 		return nil, err
 	}
 
 	return db, nil
 }
 
+func connectToCache() (*redis.Client, error) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "cache:6379",
+		DB:       0,
+		Password: "mypassword",
+		Username: "default",
+	})
+	_, err := rdb.Ping(context.Background()).Result()
+	if err != nil {
+		log.Println("Redis connection failed")
+		return nil, err
+	}
+	return rdb, nil
+}
 func main() {
 	r := gin.Default()
 
-	var db *sql.DB
-	var err error
-
-	for {
-		db, err = connectToDB()
-		if err == nil {
-			log.Println("Connection success")
-			break
-		}
-		log.Println("Waiting to connect again")
-		time.Sleep(1 * time.Second)
+	db, err := connectToDB()
+	if err != nil {
+		log.Fatal("DB connect failure")
 	}
+	sqlDB, _ := db.DB()
+	if err = sqlDB.Ping(); err != nil {
+		sqlDB.Close()
+	}
+	log.Println("DB connection success")
+	defer sqlDB.Close()
 
-	defer db.Close()
+	rdb, err := connectToCache()
+	if err != nil {
+		log.Fatal("Redis connect failure")
+	}
+	log.Println("Redis connection success")
 
-	bookRepo := repository.NewBookRepository(db)
+	bookRepo := repository.NewBookRepository(db, rdb)
 	bookService := service.NewBookService(bookRepo)
 	bookController := controller.NewBookController(bookService)
 
