@@ -48,15 +48,19 @@ func main() {
 
 	defer db.Close()
 
-	repo := repository.NewBookRepository(db)
-	svc := service.NewBookService(repo)
-	ctr := controller.NewBookController(svc)
+	bookRepo := repository.NewBookRepository(db)
+	bookService := service.NewBookService(bookRepo)
+	bookController := controller.NewBookController(bookService)
 
-	r.GET("/books", ctr.ListBooks)
-	r.GET("/book/:id", ctr.GetBookById)
-	r.POST("/book", ctr.CreateBook)
-	r.PUT("/book/:id", ctr.UpdateBookById)
-	r.DELETE("/book/:id", ctr.DeleteBookById)
+	healthCheckController := controller.NewHealthCheckController()
 
-	r.Run(":5000")
+	r.GET("/books", bookController.ListBooks)
+	r.GET("/book/:id", bookController.GetBookById)
+	r.POST("/book", bookController.CreateBook)
+	r.PUT("/book/:id", bookController.UpdateBookById)
+	r.DELETE("/book/:id", bookController.DeleteBookById)
+
+	r.GET("/health_check", healthCheckController.HealthCheck)
+
+	_ = r.Run(":5000")
 }
