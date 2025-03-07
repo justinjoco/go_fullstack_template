@@ -2,6 +2,7 @@ package repository
 
 import (
 	"app/models"
+	"context"
 	"log"
 
 	"github.com/go-redis/redis/v8"
@@ -10,11 +11,11 @@ import (
 )
 
 type BookRepository interface {
-	ListBooks() ([]models.Book, error)
-	GetBookById(id uuid.UUID) (*models.Book, error)
-	CreateBook(book *models.Book) (*models.Book, error)
-	UpdateBookById(id uuid.UUID, book *models.Book) (*models.Book, error)
-	DeleteBookById(id uuid.UUID) error
+	ListBooks(ctx context.Context) ([]models.Book, error)
+	GetBookById(ctx context.Context, id uuid.UUID) (*models.Book, error)
+	CreateBook(ctx context.Context, book *models.Book) (*models.Book, error)
+	UpdateBookById(ctx context.Context, id uuid.UUID, book *models.Book) (*models.Book, error)
+	DeleteBookById(ctx context.Context, id uuid.UUID) error
 }
 
 type bookRepository struct {
@@ -26,7 +27,7 @@ func NewBookRepository(db *gorm.DB, rdb *redis.Client) BookRepository {
 	return &bookRepository{db: db, rdb: rdb}
 }
 
-func (repo *bookRepository) ListBooks() ([]models.Book, error) {
+func (repo *bookRepository) ListBooks(ctx context.Context) ([]models.Book, error) {
 	log.Println("Listing books")
 	var books []models.Book
 
@@ -37,7 +38,7 @@ func (repo *bookRepository) ListBooks() ([]models.Book, error) {
 	return books, nil
 }
 
-func (repo *bookRepository) GetBookById(id uuid.UUID) (*models.Book, error) {
+func (repo *bookRepository) GetBookById(ctx context.Context, id uuid.UUID) (*models.Book, error) {
 	log.Println("Get book by id")
 	var book models.Book
 	if err := repo.db.First(&book, id).Error; err != nil {
@@ -47,7 +48,7 @@ func (repo *bookRepository) GetBookById(id uuid.UUID) (*models.Book, error) {
 	return &book, nil
 }
 
-func (repo *bookRepository) CreateBook(book *models.Book) (*models.Book, error) {
+func (repo *bookRepository) CreateBook(ctx context.Context, book *models.Book) (*models.Book, error) {
 	log.Println("Create book")
 	if err := repo.db.Create(&book).Error; err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func (repo *bookRepository) CreateBook(book *models.Book) (*models.Book, error) 
 	return book, nil
 }
 
-func (repo *bookRepository) UpdateBookById(id uuid.UUID, book *models.Book) (*models.Book, error) {
+func (repo *bookRepository) UpdateBookById(ctx context.Context, id uuid.UUID, book *models.Book) (*models.Book, error) {
 	log.Println("Update book by id")
 	var existingBook models.Book
 
@@ -72,7 +73,7 @@ func (repo *bookRepository) UpdateBookById(id uuid.UUID, book *models.Book) (*mo
 	return &existingBook, nil
 }
 
-func (repo *bookRepository) DeleteBookById(id uuid.UUID) error {
+func (repo *bookRepository) DeleteBookById(ctx context.Context, id uuid.UUID) error {
 	log.Println("Delete book by id")
 
 	if err := repo.db.Delete(&models.Book{}, id).Error; err != nil {

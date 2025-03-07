@@ -28,7 +28,7 @@ func NewBookController(svc service.BookService) BookController {
 
 func (c *bookController) ListBooks(ctx *gin.Context) {
 	log.Println("Listing books")
-	books := c.service.ListBooks()
+	books := c.service.ListBooks(ctx.Request.Context())
 	ctx.JSON(http.StatusOK, books)
 }
 
@@ -39,7 +39,7 @@ func (c *bookController) GetBookById(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "ID must be UUID formatted"})
 	}
-	book := c.service.GetBookById(uuidId)
+	book := c.service.GetBookById(ctx.Request.Context(), uuidId)
 	ctx.JSON(http.StatusOK, book)
 }
 
@@ -51,7 +51,7 @@ func (c *bookController) CreateBook(ctx *gin.Context) {
 		return
 	}
 
-	ret := c.service.CreateBook(&book)
+	ret := c.service.CreateBook(ctx.Request.Context(), &book)
 	ctx.JSON(http.StatusCreated, *ret)
 }
 
@@ -68,7 +68,7 @@ func (c *bookController) UpdateBookById(ctx *gin.Context) {
 		return
 	}
 
-	ret := c.service.UpdateBookById(uuidId, &book)
+	ret := c.service.UpdateBookById(ctx.Request.Context(), uuidId, &book)
 	ctx.JSON(http.StatusOK, *ret)
 
 }
@@ -80,6 +80,6 @@ func (c *bookController) DeleteBookById(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "ID must be UUID formatted"})
 	}
-	c.service.DeleteBookById(uuidId)
+	c.service.DeleteBookById(ctx.Request.Context(), uuidId)
 	ctx.Status(http.StatusNoContent)
 }

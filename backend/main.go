@@ -2,10 +2,13 @@ package main
 
 import (
 	"app/controller"
+	"app/models"
 	"app/repository"
 	"app/service"
 	"context"
+	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -28,20 +31,47 @@ func connectToDB() (*gorm.DB, error) {
 	return db, nil
 }
 
-func connectToCache() (*redis.Client, error) {
+func connectToCache(ctx context.Context) (*redis.Client, error) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "cache:6379",
 		DB:       0,
 		Password: "mypassword",
 		Username: "default",
 	})
-	_, err := rdb.Ping(context.Background()).Result()
+	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
 		log.Println("Redis connection failed")
 		return nil, err
 	}
 	return rdb, nil
 }
+
+func setupCache(ctx context.Context, db *gorm.DB, rdb *redis.Client) {
+	var books []models.Book
+
+	if err := db.Find(&books).Error; err != nil {
+		log.Fatal("unable to seed redis")
+	}
+	// Iterate over users and store them in Redis
+	for _, book := range books {
+		// Convert user to JSON
+		bookData, err := json.Marshal(book)
+		if err != nil {
+			log.Printf("Error marshalling book %d: %v", book.Id, err)
+			continue
+		}
+
+		// Store user in Redis (using the user ID as the key)
+		key := "book:" + book.Id.String()
+		err = rdb.Set(ctx, key, bookData, time.Hour).Err()
+		if err != nil {
+			log.Printf("Error storing book %d in Redis: %v", book.Id, err)
+		} else {
+			log.Printf("Book %d cached in Redis", book.Id)
+		}
+	}
+}
+
 func main() {
 	r := gin.Default()
 
@@ -55,13 +85,15 @@ func main() {
 	}
 	log.Println("DB connection success")
 	defer sqlDB.Close()
+	ctx := context.Background()
 
-	rdb, err := connectToCache()
+	rdb, err := connectToCache(ctx)
 	if err != nil {
 		log.Fatal("Redis connect failure")
 	}
 	log.Println("Redis connection success")
 
+	setupCache(ctx, db, rdb)
 	bookRepo := repository.NewBookRepository(db, rdb)
 	bookService := service.NewBookService(bookRepo)
 	bookController := controller.NewBookController(bookService)
