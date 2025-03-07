@@ -12,6 +12,8 @@ import (
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/gin-contrib/cors"
 )
 
 func connectToDB() (*gorm.DB, error) {
@@ -65,6 +67,14 @@ func main() {
 	bookController := controller.NewBookController(bookService)
 
 	healthCheckController := controller.NewHealthCheckController()
+
+	corsHandler := cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+	})
+
+	r.Use(corsHandler)
 
 	r.GET("/books", bookController.ListBooks)
 	r.GET("/book/:id", bookController.GetBookById)
