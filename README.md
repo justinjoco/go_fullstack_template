@@ -1,4 +1,4 @@
-# Flask Fullstack project template
+# Go Fullstack project template
 Fullstack project template
 
 ## Stack
