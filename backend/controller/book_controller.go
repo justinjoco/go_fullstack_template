@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"app/models"
 	"app/service"
 	"log"
 	"net/http"
@@ -9,21 +10,29 @@ import (
 	"github.com/google/uuid"
 )
 
-type BookController struct {
-	service *service.BookService
+type BookController interface {
+	ListBooks(ctx *gin.Context)
+	GetBookById(ctx *gin.Context)
+	CreateBook(ctx *gin.Context)
+	UpdateBookById(ctx *gin.Context)
+	DeleteBookById(ctx *gin.Context)
 }
 
-func NewBookController(svc *service.BookService) *BookController {
-	return &BookController{service: svc}
+type bookController struct {
+	service service.BookService
 }
 
-func (c *BookController) ListBooks(ctx *gin.Context) {
+func NewBookController(svc service.BookService) BookController {
+	return &bookController{service: svc}
+}
+
+func (c *bookController) ListBooks(ctx *gin.Context) {
 	log.Println("Listing books")
 	books := c.service.ListBooks()
 	ctx.JSON(http.StatusOK, books)
 }
 
-func (c *BookController) GetBookById(ctx *gin.Context) {
+func (c *bookController) GetBookById(ctx *gin.Context) {
 	log.Println("Get book by id")
 	id := ctx.Param("id")
 	uuidId, err := uuid.Parse(id)
@@ -34,25 +43,37 @@ func (c *BookController) GetBookById(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, book)
 }
 
-func (c *BookController) CreateBook(ctx *gin.Context) {
+func (c *bookController) CreateBook(ctx *gin.Context) {
 	log.Println("Create book")
-	book := c.service.CreateBook()
-	ctx.JSON(http.StatusCreated, book)
+	var book models.Book
+	if err := ctx.ShouldBindJSON(&book); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	ret := c.service.CreateBook(&book)
+	ctx.JSON(http.StatusCreated, *ret)
 }
 
-func (c *BookController) UpdateBookById(ctx *gin.Context) {
+func (c *bookController) UpdateBookById(ctx *gin.Context) {
 	log.Println("Update book by id")
 	id := ctx.Param("id")
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "ID must be UUID formatted"})
 	}
-	book := c.service.UpdateBookById(uuidId)
-	ctx.JSON(http.StatusOK, book)
+	var book models.Book
+	if err := ctx.ShouldBindJSON(&book); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	ret := c.service.UpdateBookById(uuidId, &book)
+	ctx.JSON(http.StatusOK, *ret)
 
 }
 
-func (c *BookController) DeleteBookById(ctx *gin.Context) {
+func (c *bookController) DeleteBookById(ctx *gin.Context) {
 	log.Println("Delete book by id")
 	id := ctx.Param("id")
 	uuidId, err := uuid.Parse(id)
