@@ -3,7 +3,7 @@ Fullstack project template
 
 ## Stack
 - Frontend: React
-- Backend: Python-Flask, SQLAlchemy
+- Backend: Go with Gin framework
 - Cache: Redis
 - DB: Postgres
 - Local development: Docker-compose
