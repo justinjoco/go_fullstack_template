@@ -32,8 +32,6 @@ services:
       retries: 5
     ports:
       - 5432:5432
-    volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql 
     environment:
       - POSTGRES_PASSWORD=password
       - POSTGRES_USER=admin
