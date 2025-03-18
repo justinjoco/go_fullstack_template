@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,9 +20,7 @@ import (
 	"github.com/gin-contrib/cors"
 )
 
-func connectToDB() (*gorm.DB, error) {
-
-	dsn := "postgres://admin:password@postgres/app_db"
+func connectToDB(dsn string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Println("DB connection failed")
@@ -31,17 +30,17 @@ func connectToDB() (*gorm.DB, error) {
 	return db, nil
 }
 
-func connectToCache(ctx context.Context) (*redis.Client, error) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "cache:6379",
-		DB:       0,
-		Password: "mypassword",
-		Username: "default",
-	})
-	_, err := rdb.Ping(ctx).Result()
+func connectToCache(ctx context.Context, redisUrl string) (*redis.Client, error) {
+	opts, err := redis.ParseURL(redisUrl)
 	if err != nil {
+		panic(err)
+	}
+
+	rdb := redis.NewClient(opts)
+	_, pingErr := rdb.Ping(ctx).Result()
+	if pingErr != nil {
 		log.Println("Redis connection failed")
-		return nil, err
+		return nil, pingErr
 	}
 	return rdb, nil
 }
@@ -74,8 +73,9 @@ func setupCache(ctx context.Context, db *gorm.DB, rdb *redis.Client) {
 
 func main() {
 	r := gin.Default()
+	dbUrl := os.Getenv("DATABASE_URL")
 
-	db, err := connectToDB()
+	db, err := connectToDB(dbUrl)
 	if err != nil {
 		log.Fatal("DB connect failure")
 	}
@@ -87,7 +87,8 @@ func main() {
 	defer sqlDB.Close()
 	ctx := context.Background()
 
-	rdb, err := connectToCache(ctx)
+	redisUrl := os.Getenv("REDIS_URL")
+	rdb, err := connectToCache(ctx, redisUrl)
 	if err != nil {
 		log.Fatal("Redis connect failure")
 	}

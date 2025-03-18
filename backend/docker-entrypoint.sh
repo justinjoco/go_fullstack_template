@@ -8,5 +8,5 @@ done
 
 echo "PostgreSQL started"
 
-migrate -path /app/migrations -database "postgres://admin:password@postgres/app_db?sslmode=disable" up
+migrate -path /app/migrations -database "${DATABASE_URL}?sslmode=disable" up
 exec /bin/app
